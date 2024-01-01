@@ -1,0 +1,8 @@
+{
+	order jwtauth before basicauth
+}
+
+localhost:5051 {
+	jwtauth {
+	}
+}
