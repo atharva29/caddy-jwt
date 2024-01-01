@@ -1,4 +1,4 @@
-module github.com/example/jwt
+module github.com/atharva29/caddy-jwt
 
 go 1.21.5
 
