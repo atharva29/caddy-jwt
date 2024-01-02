@@ -1,51 +1,92 @@
-package jwt
+package visitorip
 
 import (
 	"fmt"
+	"io"
 	"net/http"
-
-	// _ "github.com/example/jwt"
+	"os"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 )
 
 func init() {
-	caddy.RegisterModule(JWTAuth{})
-	httpcaddyfile.RegisterDirective("jwtauth", nil)
+	caddy.RegisterModule(Middleware{})
+	httpcaddyfile.RegisterHandlerDirective("visitor_ip", parseCaddyfile)
 }
 
-type JWTAuth struct{}
+// Middleware implements an HTTP handler that writes the
+// visitor's IP address to a file or stream.
+type Middleware struct {
+	// The file or stream to write to. Can be "stdout"
+	// or "stderr".
+	Output string `json:"output,omitempty"`
 
-func (JWTAuth) CaddyModule() caddy.ModuleInfo {
+	w io.Writer
+}
+
+// CaddyModule returns the Caddy module information.
+func (Middleware) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "http.handlers.jwtauth",
-		New: func() caddy.Module { return new(JWTAuth) },
+		ID:  "http.handlers.visitor_ip",
+		New: func() caddy.Module { return new(Middleware) },
 	}
 }
 
-func (h *JWTAuth) Provision(ctx caddy.Context) error {
+// Provision implements caddy.Provisioner.
+func (m *Middleware) Provision(ctx caddy.Context) error {
+	switch m.Output {
+	case "stdout":
+		m.w = os.Stdout
+	case "stderr":
+		m.w = os.Stderr
+	default:
+		return fmt.Errorf("an output stream is required")
+	}
 	return nil
 }
 
-func (h *JWTAuth) Validate() error {
+// Validate implements caddy.Validator.
+func (m *Middleware) Validate() error {
+	if m.w == nil {
+		return fmt.Errorf("no writer")
+	}
 	return nil
 }
 
-func (h JWTAuth) ServeHTTP(w http.ResponseWriter, r *http.Request, f caddyhttp.Handler) error {
-	fmt.Println("**********  Setting Header ****************************")
-	// Add the custom header
-	w.Header().Set("message", "Hello world")
+// ServeHTTP implements caddyhttp.MiddlewareHandler.
+func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+	m.w.Write([]byte(r.RemoteAddr))
+	return next.ServeHTTP(w, r)
+}
 
-	// Reverse proxy to localhost:5000
-	// proxy := reverseproxy.New(&http.Server{
-	// 	Addr: "localhost:5000",
-	// })
-	return f.ServeHTTP(w, r)
+// UnmarshalCaddyfile implements caddyfile.Unmarshaler.
+func (m *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	d.Next() // consume directive name
+
+	// require an argument
+	if !d.NextArg() {
+		return d.ArgErr()
+	}
+
+	// store the argument
+	m.Output = d.Val()
+	return nil
+}
+
+// parseCaddyfile unmarshals tokens from h into a new Middleware.
+func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
+	var m Middleware
+	err := m.UnmarshalCaddyfile(h.Dispenser)
+	return m, err
 }
 
 // Interface guards
 var (
-	_ caddyhttp.MiddlewareHandler = (*JWTAuth)(nil)
+	_ caddy.Provisioner           = (*Middleware)(nil)
+	_ caddy.Validator             = (*Middleware)(nil)
+	_ caddyhttp.MiddlewareHandler = (*Middleware)(nil)
+	_ caddyfile.Unmarshaler       = (*Middleware)(nil)
 )

@@ -1,0 +1,1 @@
+xcaddy build --with github.com/atharva29/caddy-jwt=./

@@ -1,8 +1,8 @@
 {
-	order jwtauth before basicauth
+    debug
+    order visitor_ip before respond
 }
 
-localhost:5051 {
-	jwtauth {
-	}
+:2021 {
+    visitor_ip stdout
 }

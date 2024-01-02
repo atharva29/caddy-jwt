@@ -49,6 +49,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/libdns/libdns v0.2.1 // indirect
 	github.com/manifoldco/promptui v0.9.0 // indirect
+	github.com/mastercactapus/proxyprotocol v0.0.4 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
